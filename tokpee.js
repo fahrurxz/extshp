@@ -54628,34 +54628,102 @@ KAPAN TERPANGGIL:
                 3
               );
               console.log("Shopee Search getProducts() - domCacheMap result:", a);
+              console.log("Shopee Search getProducts() - domCacheMap structure:", {
+                hasA: !!a,
+                hasBody: !!a?.body,
+                hasBodyData: !!a?.body?.data,
+                bodyType: typeof a?.body,
+                bodyDataType: typeof a?.body?.data,
+                fullStructure: a
+              });
               
               // If we have domCacheMap data (fresh API response), use it directly  
-              if (a && a.body && a.body.data) {
-                console.log("Shopee Search getProducts() - domCacheMap response received:", a.body);
+              if (a && (a.body || a.data)) {
+                const responseData = a.body || a.data;
+                console.log("Shopee Search getProducts() - domCacheMap response received:", responseData);
                 
                 // Parse the nested JSON data structure from the API response
                 let parsedData;
                 try {
-                  // The data is nested as JSON string in a.body.data.data
-                  if (typeof a.body.data.data === 'string') {
-                    parsedData = JSON.parse(a.body.data.data);
+                  // Try multiple possible data locations
+                  if (responseData.data && typeof responseData.data.data === 'string') {
+                    console.log("Shopee Search getProducts() - parsing JSON string from responseData.data.data");
+                    parsedData = JSON.parse(responseData.data.data);
+                  } else if (responseData.data && typeof responseData.data === 'string') {
+                    console.log("Shopee Search getProducts() - parsing JSON string from responseData.data");
+                    parsedData = JSON.parse(responseData.data);
+                  } else if (typeof responseData === 'string') {
+                    console.log("Shopee Search getProducts() - parsing JSON string from responseData");
+                    parsedData = JSON.parse(responseData);
+                  } else if (responseData.data && responseData.data.data) {
+                    console.log("Shopee Search getProducts() - using object from responseData.data.data");
+                    parsedData = responseData.data.data;
+                  } else if (responseData.data) {
+                    console.log("Shopee Search getProducts() - using object from responseData.data");
+                    parsedData = responseData.data;
                   } else {
-                    parsedData = a.body.data.data;
+                    console.log("Shopee Search getProducts() - using responseData directly");
+                    parsedData = responseData;
                   }
                   console.log("Shopee Search getProducts() - parsed data structure:", {
                     itemsLength: parsedData?.items?.length,
-                    metaInfo: parsedData?.meta
+                    metaInfo: parsedData?.meta,
+                    dataKeys: Object.keys(parsedData || {}),
+                    sampleItem: parsedData?.items?.[0]
                   });
                 } catch (parseError) {
                   console.error("Shopee Search getProducts() - JSON parse error:", parseError);
-                  throw new Error("Failed to parse API response data");
+                  console.log("Shopee Search getProducts() - raw data that failed to parse:", responseData);
+                  // Don't throw error, continue to check for direct object structure
+                  parsedData = responseData;
                 }
                 
+                // Check for multiple possible data structures from Shopee API
+                let itemsArray = null;
                 if (parsedData && parsedData.items && Array.isArray(parsedData.items)) {
-                  console.log("Shopee Search getProducts() - using fresh API data:", parsedData.items.length, "items");
+                  itemsArray = parsedData.items;
+                  console.log("Shopee Search getProducts() - found items in parsedData.items");
+                } else if (parsedData && Array.isArray(parsedData)) {
+                  itemsArray = parsedData;
+                  console.log("Shopee Search getProducts() - parsedData is array itself");
+                } else if (parsedData && parsedData.data && Array.isArray(parsedData.data)) {
+                  itemsArray = parsedData.data;
+                  console.log("Shopee Search getProducts() - found items in parsedData.data");
+                } else if (a.body && a.body.items && Array.isArray(a.body.items)) {
+                  itemsArray = a.body.items;
+                  console.log("Shopee Search getProducts() - found items in a.body.items");
+                } else if (responseData.items && Array.isArray(responseData.items)) {
+                  itemsArray = responseData.items;
+                  console.log("Shopee Search getProducts() - found items in responseData.items");
+                } else {
+                  console.log("Shopee Search getProducts() - checking for alternative item structures");
+                  // Try to find items in nested structures
+                  const checkForItems = (obj, path = '') => {
+                    if (!obj || typeof obj !== 'object') return null;
+                    if (Array.isArray(obj) && obj.length > 0) {
+                      console.log(`Shopee Search getProducts() - found array at ${path}, length:`, obj.length);
+                      // Check if this looks like a product array
+                      const firstItem = obj[0];
+                      if (firstItem && (firstItem.itemid || firstItem.item_basic || firstItem.id || firstItem.name || 
+                                       firstItem.price || firstItem.shop_name || firstItem.item_name)) {
+                        console.log(`Shopee Search getProducts() - confirmed product array at ${path}`);
+                        return obj;
+                      }
+                    }
+                    for (const key in obj) {
+                      const result = checkForItems(obj[key], `${path}.${key}`);
+                      if (result) return result;
+                    }
+                    return null;
+                  };
+                  itemsArray = checkForItems(responseData) || checkForItems(a);
+                }
+                
+                if (itemsArray && itemsArray.length > 0) {
+                  console.log("Shopee Search getProducts() - using fresh API data:", itemsArray.length, "items");
                   
                   // Process the fresh API data directly
-                  const freshItems = parsedData.items;
+                  const freshItems = itemsArray;
                   let processedData = [];
                   
                   for (const e of freshItems) {
@@ -54667,33 +54735,38 @@ KAPAN TERPANGGIL:
                     
                     console.log("Processing Shopee item with structure:", Object.keys(e));
                     console.log("Sample item data:", {
-                      id: e.id,
-                      name: e.name,
-                      price: e.price,
-                      shop_name: e.shop?.name,
-                      shop_id: e.shop?.id,
-                      sold: e.sold,
+                      id: e.id || e.itemid,
+                      name: e.name || e.item_basic?.name,
+                      price: e.price || e.item_basic?.price,
+                      shop_name: e.shop?.name || e.item_basic?.shop_name,
+                      shop_id: e.shop?.id || e.item_basic?.shopid,
+                      sold: e.sold || e.item_basic?.sold,
                       rating: e.rating,
                       location: e.location
                     });
                     
-                    // Use the correct field mapping based on actual API response structure
-                    const itemId = e.id || 0;
-                    const productName = e.name || "Unknown Product";
-                    const shopId = e.shop?.id || 0;
-                    const shopName = e.shop?.name || "Unknown Shop";
-                    const rawPrice = e.price || 0;
-                    const historicalSold = e.sold || 0;
-                    const image = e.image || "";
-                    const shopLocation = e.location || e.shop?.city || "";
-                    const itemRating = { rating_star: e.rating || 0, rating_count: [e.ratingCount || 0] };
-                    const isOfficial = e.shop?.isOfficial || false;
-                    const isVerified = e.shop?.isPowerBadge || false;
-                    const isPreferred = e.shop?.isPrefered || false;
-                    const createdTime = e.createdAt ? new Date(e.createdAt).getTime() / 1000 : Date.now() / 1000;
+                    // Handle multiple possible data structures from Shopee API
+                    const itemBasic = e.item_basic || e;
+                    const itemId = e.id || e.itemid || itemBasic.itemid || 0;
+                    const productName = e.name || itemBasic.name || itemBasic.item_name || "Unknown Product";
+                    const shopId = e.shop?.id || itemBasic.shopid || 0;
+                    const shopName = e.shop?.name || itemBasic.shop_name || "Unknown Shop";
+                    const rawPrice = e.price || itemBasic.price || itemBasic.price_max || 0;
+                    const historicalSold = e.sold || itemBasic.sold || itemBasic.historical_sold || 0;
+                    const image = e.image || itemBasic.image || "";
+                    const shopLocation = e.location || itemBasic.shop_location || e.shop?.city || "";
+                    const itemRating = { 
+                      rating_star: e.rating || itemBasic.item_rating?.rating_star || 0, 
+                      rating_count: [e.ratingCount || itemBasic.item_rating?.rating_count?.[0] || 0] 
+                    };
+                    const isOfficial = e.shop?.isOfficial || itemBasic.is_official_shop || false;
+                    const isVerified = e.shop?.isPowerBadge || itemBasic.shopee_verified || false;
+                    const isPreferred = e.shop?.isPrefered || itemBasic.is_preferred_plus_seller || false;
+                    const createdTime = e.createdAt ? new Date(e.createdAt).getTime() / 1000 : 
+                                      itemBasic.ctime ? itemBasic.ctime : Date.now() / 1000;
                     
-                    // Convert price from base units (likely in cents) to actual price
-                    const i = rawPrice / 100000; // Shopee prices are usually in units of 100000
+                    // Convert price from base units (Shopee prices are usually in units of 100000)
+                    const i = rawPrice / 100000;
                     const h = historicalSold;
                     const s = i * h; // revenue
                     const d = s; // revenue per month (simplified)
@@ -54737,7 +54810,7 @@ KAPAN TERPANGGIL:
                       revenuePerMonth: d,
                       soldPerMonth: u,
                       location: shopLocation,
-                      description: e.description || "",
+                      description: e.description || itemBasic.description || "",
                       tags: [],
                       createdAt: new Date(o).toISOString(),
                       updatedAt: new Date().toISOString()
@@ -54754,13 +54827,18 @@ KAPAN TERPANGGIL:
                     meta: {
                       query: l,
                       page: o,
-                      totalCount: parsedData.meta?.totalCount || processedData.length,
+                      totalCount: parsedData?.meta?.totalCount || parsedData?.total_count || processedData.length,
                       timestamp: Date.now(),
                       source: "domCacheMap"
                     }
                   };
                   
-                  console.log("Shopee Search getProducts() - saving fresh data to cache");
+                  console.log("Shopee Search getProducts() - saving fresh domCacheMap data to cache:", {
+                    itemsCount: cacheData.items.length,
+                    meta: cacheData.meta,
+                    sampleItem: cacheData.items[0]
+                  });
+                  
                   _i.save(
                     document.location.host || "shopee",
                     `SearchResult:${l}:${o}`,
@@ -54773,7 +54851,8 @@ KAPAN TERPANGGIL:
                     need_update: false
                   });
                 } else {
-                  console.log("Shopee Search getProducts() - no items found in parsed data");
+                  console.log("Shopee Search getProducts() - no valid items found in domCacheMap data");
+                  console.log("Shopee Search getProducts() - parsedData structure:", parsedData);
                 }
               } else {
                 console.log("Shopee Search getProducts() - no domCacheMap data available");
