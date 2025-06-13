@@ -1,0 +1,34 @@
+# Node modules & logs
+node_modules/
+logs/
+*.log
+
+# Dependency & cache
+package-lock.json
+.cache/
+.cache_data/
+*.cache
+
+# Build or temp files
+dist/
+build/
+*.tmp
+*.swp
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Test reports & JSON results
+test-report-*.json
+
+# IDE configs
+.vscode/
+.idea/
+
+# Optional: Ignore coverage
+coverage/
+*.lcov
+
+# Ignore HTML if generated (adjust if not)
+*.html
