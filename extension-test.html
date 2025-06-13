@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tokpee Extension Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .test-button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        .test-button:hover {
+            background-color: #0056b3;
+        }
+        .test-button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .log-area {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+        .quick-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .quick-links a {
+            display: inline-block;
+            padding: 8px 16px;
+            background-color: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 12px;
+        }
+        .quick-links a:hover {
+            background-color: #218838;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #6c757d;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Tokpee Extension Test Dashboard</h1>
+        <p>This page helps test the Tokpee extension functionality and cache server integration.</p>
+    </div>
+
+    <div class="container">
+        <h2>📊 Server Status</h2>
+        <div id="serverStatus" class="status info">Checking server status...</div>
+        <button class="test-button" onclick="checkServerStatus()">Refresh Server Status</button>
+        <button class="test-button" onclick="clearCache()">Clear Cache</button>
+        <button class="test-button" onclick="getStats()">Get Server Stats</button>
+    </div>
+
+    <div class="container">
+        <h2>🧪 Extension Tests</h2>
+        <div class="quick-links">
+            <a href="https://shopee.co.id/search?keyword=tas" target="_blank">Shopee Search: tas</a>
+            <a href="https://shopee.co.id/search?keyword=laptop" target="_blank">Shopee Search: laptop</a>
+            <a href="https://www.tokopedia.com/search?st=product&q=tas" target="_blank">Tokopedia Search: tas</a>
+            <a href="https://www.tokopedia.com/search?st=product&q=laptop" target="_blank">Tokopedia Search: laptop</a>
+        </div>
+        <div class="status info">
+            Click the links above to test the extension on real marketplace pages. Check the browser console for detailed logs.
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>💾 Cache Tests</h2>
+        <button class="test-button" onclick="testCacheMiss()">Test Cache Miss</button>
+        <button class="test-button" onclick="testCacheSave()">Test Cache Save</button>
+        <button class="test-button" onclick="testCacheHit()">Test Cache Hit</button>
+        <button class="test-button" onclick="testFullFlow()">Test Full Flow</button>
+        <div id="cacheTestResults" class="log-area"></div>
+    </div>
+
+    <div class="container">
+        <h2>📈 Server Statistics</h2>
+        <div id="serverStats" class="stats">
+            <div class="stat-card">
+                <div class="stat-number" id="totalRequests">-</div>
+                <div class="stat-label">Total Requests</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="cacheHits">-</div>
+                <div class="stat-label">Cache Hits</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="cacheMisses">-</div>
+                <div class="stat-label">Cache Misses</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="cacheSaves">-</div>
+                <div class="stat-label">Cache Saves</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="memoryEntries">-</div>
+                <div class="stat-label">Memory Entries</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="diskFiles">-</div>
+                <div class="stat-label">Disk Files</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>📝 Live Logs</h2>
+        <button class="test-button" onclick="clearLogs()">Clear Logs</button>
+        <button class="test-button" onclick="toggleAutoRefresh()" id="autoRefreshBtn">Start Auto-Refresh</button>
+        <div id="liveLogs" class="log-area">Click "Start Auto-Refresh" to see live server activity...</div>
+    </div>
+
+    <script>
+        const SERVER_URL = 'http://localhost:8080';
+        let autoRefreshInterval = null;
+        let logBuffer = [];
+
+        // Utility functions
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logMessage = `[${timestamp}] ${message}`;
+            logBuffer.push(logMessage);
+            
+            // Keep only last 100 log entries
+            if (logBuffer.length > 100) {
+                logBuffer = logBuffer.slice(-100);
+            }
+            
+            updateLiveLogs();
+        }
+
+        function updateLiveLogs() {
+            document.getElementById('liveLogs').textContent = logBuffer.join('\n');
+            // Auto-scroll to bottom
+            const logsElement = document.getElementById('liveLogs');
+            logsElement.scrollTop = logsElement.scrollHeight;
+        }
+
+        function clearLogs() {
+            logBuffer = [];
+            updateLiveLogs();
+        }
+
+        function toggleAutoRefresh() {
+            const btn = document.getElementById('autoRefreshBtn');
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+                btn.textContent = 'Start Auto-Refresh';
+                log('Auto-refresh stopped');
+            } else {
+                autoRefreshInterval = setInterval(() => {
+                    getStats();
+                }, 2000);
+                btn.textContent = 'Stop Auto-Refresh';
+                log('Auto-refresh started (every 2 seconds)');
+            }
+        }
+
+        // API functions
+        async function makeRequest(method, path, data = null) {
+            try {
+                const options = {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                };
+                
+                if (data) {
+                    options.body = JSON.stringify(data);
+                }
+
+                const response = await fetch(SERVER_URL + path, options);
+                const result = await response.json();
+                
+                log(`${method} ${path} - Status: ${response.status}`);
+                return { status: response.status, data: result };
+            } catch (error) {
+                log(`${method} ${path} - Error: ${error.message}`, 'error');
+                return { status: 0, error: error.message };
+            }
+        }
+
+        // Server status functions
+        async function checkServerStatus() {
+            const statusDiv = document.getElementById('serverStatus');
+            statusDiv.textContent = 'Checking server status...';
+            statusDiv.className = 'status info';
+
+            try {
+                const result = await makeRequest('GET', '/health');
+                if (result.status === 200) {
+                    statusDiv.textContent = `✅ Server is running - ${result.data.message}`;
+                    statusDiv.className = 'status success';
+                } else {
+                    statusDiv.textContent = `❌ Server error - Status: ${result.status}`;
+                    statusDiv.className = 'status error';
+                }
+            } catch (error) {
+                statusDiv.textContent = `❌ Cannot connect to server: ${error.message}`;
+                statusDiv.className = 'status error';
+            }
+        }
+
+        async function clearCache() {
+            const result = await makeRequest('DELETE', '/api/cache');
+            if (result.status === 200) {
+                log(`Cache cleared - ${result.data.deletedFiles} files deleted`);
+            } else {
+                log(`Cache clear failed - Status: ${result.status}`, 'error');
+            }
+        }
+
+        async function getStats() {
+            const result = await makeRequest('GET', '/api/stats');
+            if (result.status === 200) {
+                const stats = result.data;
+                
+                // Update stat cards
+                document.getElementById('totalRequests').textContent = stats.requests.total;
+                document.getElementById('cacheHits').textContent = stats.cache.hits;
+                document.getElementById('cacheMisses').textContent = stats.cache.misses;
+                document.getElementById('cacheSaves').textContent = stats.cache.saves;
+                document.getElementById('memoryEntries').textContent = stats.storage.memoryEntries;
+                document.getElementById('diskFiles').textContent = stats.storage.diskFiles;
+                
+                if (!autoRefreshInterval) {
+                    log('Server statistics updated');
+                }
+            } else {
+                log(`Failed to get stats - Status: ${result.status}`, 'error');
+            }
+        }
+
+        // Cache test functions
+        async function testCacheMiss() {
+            const resultsDiv = document.getElementById('cacheTestResults');
+            resultsDiv.textContent = 'Testing cache miss...\n';
+
+            const testKey = 'SearchResult:keyword=test' + Date.now() + ':1';
+            const result = await makeRequest('GET', `/api/cache?platform=shopee.co.id&type=${testKey}&_=${Date.now()}`);
+            
+            if (result.status === 200 && result.data.response.status === 503) {
+                resultsDiv.textContent += '✅ Cache miss test passed - Got 503 status as expected\n';
+                resultsDiv.textContent += `Response: ${JSON.stringify(result.data, null, 2)}\n`;
+            } else {
+                resultsDiv.textContent += `❌ Cache miss test failed - Expected 503, got ${result.data?.response?.status}\n`;
+                resultsDiv.textContent += `Response: ${JSON.stringify(result.data, null, 2)}\n`;
+            }
+        }
+
+        async function testCacheSave() {
+            const resultsDiv = document.getElementById('cacheTestResults');
+            resultsDiv.textContent = 'Testing cache save...\n';
+
+            const testData = {
+                platform: 'shopee.co.id',
+                data: [{
+                    type: 'SearchResult:keyword=testdata' + Date.now() + ':1',
+                    raw: JSON.stringify({
+                        items: [
+                            { id: 1, name: 'Test Product 1', price: 100000 },
+                            { id: 2, name: 'Test Product 2', price: 200000 }
+                        ],
+                        meta: { totalCount: 2, query: 'testdata', source: 'testSave' }
+                    })
+                }]
+            };
+
+            const result = await makeRequest('POST', '/api/cache', testData);
+            
+            if (result.status === 200 && result.data.saved > 0) {
+                resultsDiv.textContent += `✅ Cache save test passed - Saved ${result.data.saved} items\n`;
+                resultsDiv.textContent += `Response: ${JSON.stringify(result.data, null, 2)}\n`;
+            } else {
+                resultsDiv.textContent += `❌ Cache save test failed - Status: ${result.status}\n`;
+                resultsDiv.textContent += `Response: ${JSON.stringify(result.data, null, 2)}\n`;
+            }
+        }
+
+        async function testCacheHit() {
+            const resultsDiv = document.getElementById('cacheTestResults');
+            resultsDiv.textContent = 'Testing cache hit...\n';
+
+            // First save some data
+            const testKey = 'SearchResult:keyword=hitTest' + Date.now() + ':1';
+            const saveData = {
+                platform: 'shopee.co.id',
+                data: [{
+                    type: testKey,
+                    raw: JSON.stringify({
+                        items: [{ id: 999, name: 'Hit Test Product', price: 50000 }],
+                        meta: { totalCount: 1, query: 'hitTest', source: 'testHit' }
+                    })
+                }]
+            };
+
+            await makeRequest('POST', '/api/cache', saveData);
+            resultsDiv.textContent += 'Data saved, now testing cache hit...\n';
+
+            // Now try to get it
+            const result = await makeRequest('GET', `/api/cache?platform=shopee.co.id&type=${testKey}&_=${Date.now()}`);
+            
+            if (result.status === 200 && result.data.response.status === 200) {
+                resultsDiv.textContent += '✅ Cache hit test passed - Got 200 status with cached data\n';
+                const cachedData = JSON.parse(result.data.response.body.data.data);
+                resultsDiv.textContent += `Cached items: ${cachedData.items.length}\n`;
+                resultsDiv.textContent += `First item: ${cachedData.items[0].name}\n`;
+            } else {
+                resultsDiv.textContent += `❌ Cache hit test failed - Expected 200, got ${result.data?.response?.status}\n`;
+                resultsDiv.textContent += `Response: ${JSON.stringify(result.data, null, 2)}\n`;
+            }
+        }
+
+        async function testFullFlow() {
+            const resultsDiv = document.getElementById('cacheTestResults');
+            resultsDiv.textContent = 'Testing full cache flow (miss → save → hit)...\n';
+
+            const testKey = 'SearchResult:keyword=fullFlow' + Date.now() + ':1';
+            
+            // Step 1: Test cache miss
+            resultsDiv.textContent += '1. Testing cache miss...\n';
+            let result = await makeRequest('GET', `/api/cache?platform=shopee.co.id&type=${testKey}&_=${Date.now()}`);
+            
+            if (result.status === 200 && result.data.response.status === 503) {
+                resultsDiv.textContent += '   ✅ Cache miss confirmed\n';
+            } else {
+                resultsDiv.textContent += `   ❌ Expected cache miss (503), got ${result.data?.response?.status}\n`;
+                return;
+            }
+
+            // Step 2: Save data
+            resultsDiv.textContent += '2. Saving test data...\n';
+            const saveData = {
+                platform: 'shopee.co.id',
+                data: [{
+                    type: testKey,
+                    raw: JSON.stringify({
+                        items: [
+                            { id: 101, name: 'Full Flow Product 1', price: 150000 },
+                            { id: 102, name: 'Full Flow Product 2', price: 250000 }
+                        ],
+                        meta: { totalCount: 2, query: 'fullFlow', source: 'testFullFlow' }
+                    })
+                }]
+            };
+
+            result = await makeRequest('POST', '/api/cache', saveData);
+            
+            if (result.status === 200 && result.data.saved > 0) {
+                resultsDiv.textContent += `   ✅ Data saved successfully (${result.data.saved} items)\n`;
+            } else {
+                resultsDiv.textContent += `   ❌ Save failed - Status: ${result.status}\n`;
+                return;
+            }
+
+            // Step 3: Test cache hit
+            resultsDiv.textContent += '3. Testing cache hit...\n';
+            result = await makeRequest('GET', `/api/cache?platform=shopee.co.id&type=${testKey}&_=${Date.now()}`);
+            
+            if (result.status === 200 && result.data.response.status === 200) {
+                resultsDiv.textContent += '   ✅ Cache hit confirmed\n';
+                const cachedData = JSON.parse(result.data.response.body.data.data);
+                resultsDiv.textContent += `   📦 Retrieved ${cachedData.items.length} cached items\n`;
+                resultsDiv.textContent += `   🏷️  Items: ${cachedData.items.map(item => item.name).join(', ')}\n`;
+                resultsDiv.textContent += '\n🎉 Full flow test completed successfully!\n';
+            } else {
+                resultsDiv.textContent += `   ❌ Cache hit failed - Expected 200, got ${result.data?.response?.status}\n`;
+            }
+        }
+
+        // Initialize page
+        window.onload = function() {
+            checkServerStatus();
+            getStats();
+            log('Test dashboard initialized');
+        };
+    </script>
+</body>
+</html>

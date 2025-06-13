@@ -1,0 +1,27 @@
+{
+  "name": "tokpee-cache-server",
+  "version": "1.0.0",
+  "description": "Enhanced cache server for Tokpee extension",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "node test-cache.js",
+    "test-flow": "node test-full-flow.js",
+    "monitor": "node monitor.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "node-fetch": "^3.3.2"
+  },
+  "keywords": [
+    "tokpee",
+    "cache",
+    "server",
+    "shopee",
+    "tokopedia"
+  ],
+  "author": "Tokpee Team",
+  "license": "MIT"
+}

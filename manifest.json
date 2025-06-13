@@ -1,0 +1,62 @@
+{
+"update_url": "https://clients2.google.com/service/update2/crx",
+
+  "name":"Tokpee",
+  "short_name":"tokpee",
+  "description":"Help you to find hot selling product on Tokopedia and Shopee",
+  "version": "1.11.5",
+  "homepage_url" : "http://tokpee.co",
+  "manifest_version": 3,
+  "permissions": [
+      "tabs",
+      "storage",
+      "background",
+      "declarativeNetRequest",
+      "declarativeNetRequestWithHostAccess",
+      "declarativeNetRequestFeedback",
+      "notifications",
+      "cookies",
+      "alarms"
+  ],
+  "host_permissions": [
+    "*://*.tokopedia.com/*",
+    "*://*.shopee.co.id/*",
+    "*://*.tokpee.co/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.tokopedia.com/*", "*://*.shopee.co.id/*", "*://*.tokpee.co/*"],
+      "js": ["tokpee.js"],
+      "css": ["css/tokpee.css"],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "sdom.js"
+      ],
+      "matches": [
+        "*://*.shopee.co.id/*"
+      ]
+    }
+  ],
+  "action": {
+    "default_icon": {
+        "16": "img/icon-16.png",
+        "48": "img/icon-48.png"
+    }
+  },
+  "icons": {
+    "128": "img/icon-128.png",
+    "48": "img/icon-48.png",
+    "16": "img/icon-16.png"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
+}

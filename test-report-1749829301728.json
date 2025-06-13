@@ -1,0 +1,100 @@
+{
+  "timestamp": "2025-06-13T15:41:41.728Z",
+  "summary": {
+    "total": 17,
+    "passed": 14,
+    "failed": 3,
+    "successRate": 82.35294117647058
+  },
+  "details": [
+    {
+      "test": "Server Health Check",
+      "passed": false,
+      "details": "Status: 200, Message: No message"
+    },
+    {
+      "test": "Server Statistics Endpoint",
+      "details": "Status: 200, Has required fields: undefined"
+    },
+    {
+      "test": "Cache Clear Operation",
+      "passed": true,
+      "details": "Status: 200, Message: Cache cleared"
+    },
+    {
+      "test": "Cache Miss Detection",
+      "passed": true,
+      "details": "Status: 200, Response Status: 503, Message: cache miss"
+    },
+    {
+      "test": "Cache Save Operation",
+      "passed": true,
+      "details": "Status: 200, Saved: 1 items, Timestamp: 1749829301671"
+    },
+    {
+      "test": "Cache Save Operation",
+      "passed": true,
+      "details": "Status: 200, Saved: 1 items, Timestamp: 1749829301674"
+    },
+    {
+      "test": "Cache Hit Retrieval",
+      "passed": {
+        "data": "{\"items\":[{\"id\":1001,\"name\":\"Test Product Save 1\",\"price\":100000},{\"id\":1002,\"name\":\"Test Product Save 2\",\"price\":200000}],\"meta\":{\"totalCount\":2,\"query\":\"testSave\",\"source\":\"testCacheSave\",\"timestamp\":1749829301672}}",
+        "date": 1749829301673,
+        "need_update": false,
+        "finger": "cached_data"
+      },
+      "details": "Status: 200, Response Status: 200, Items: 2"
+    },
+    {
+      "test": "Full Cache Flow (Miss → Save → Hit)",
+      "passed": true,
+      "details": "Miss: true, Save: true, Hit: true, Items: 3/3"
+    },
+    {
+      "test": "Response Signature Validation",
+      "passed": true,
+      "details": "Has signature: true, Has timestamp: true"
+    },
+    {
+      "test": "Multiple Platform Support",
+      "passed": true,
+      "details": "Tested platforms: shopee.co.id, tokopedia.com"
+    },
+    {
+      "test": "Invalid JSON Error Handling",
+      "passed": false,
+      "details": "Status: 500"
+    },
+    {
+      "test": "Missing Fields Error Handling",
+      "passed": true,
+      "details": "Status: 400"
+    },
+    {
+      "test": "Non-existent Endpoint Handling",
+      "passed": true,
+      "details": "Status: 404"
+    },
+    {
+      "test": "Cache Directory Exists",
+      "passed": true,
+      "details": "Path: E:\\bot\\fixshp\\cache_data"
+    },
+    {
+      "test": "Logs Directory Exists",
+      "passed": true,
+      "details": "Path: E:\\bot\\fixshp\\logs"
+    },
+    {
+      "test": "Daily Log File Creation",
+      "passed": true,
+      "details": "Log files: 1, Current day log: true"
+    },
+    {
+      "test": "Performance Metrics",
+      "passed": true,
+      "details": "Avg: 2.90ms, Min: 2ms, Max: 4ms"
+    }
+  ]
+}
