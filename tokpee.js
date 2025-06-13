@@ -20470,6 +20470,28 @@ KAPAN TERPANGGIL:
             
           } catch (error) {
             console.error("_i.get() - error:", error);
+            
+            // Handle extension context invalidation
+            if (error.message && error.message.includes("Extension context invalidated")) {
+              console.warn("_i.get() - extension context invalidated, returning cached data if available");
+              // Try to return some default/cached response structure
+              return {
+                response: {
+                  status: 200,
+                  body: {
+                    data: {
+                      data: "[]",
+                      date: Date.now(),
+                      need_update: true,
+                      finger: "extension-invalidated"
+                    },
+                    sign: "fallback",
+                    ftime: Date.now()
+                  }
+                }
+              };
+            }
+            
             throw error;
           }
         }
@@ -20619,19 +20641,31 @@ KAPAN TERPANGGIL:
           return (
             navigator.userAgent?.includes("Firefox/")
               ? this.setHeader("X-Referer", e)
-              : chrome.runtime.sendMessage(
-                  {
-                    action: "set-referer",
-                    data: {
-                      domain: document.location.host,
-                      url: t,
-                      referer: e,
-                    },
-                  },
-                  (t) => {
-                    n && n(t);
+              : (() => {
+                  try {
+                    chrome.runtime.sendMessage(
+                      {
+                        action: "set-referer",
+                        data: {
+                          domain: document.location.host,
+                          url: t,
+                          referer: e,
+                        },
+                      },
+                      (t) => {
+                        if (chrome.runtime.lastError) {
+                          console.warn("setReferer - chrome.runtime.lastError:", chrome.runtime.lastError.message);
+                          return;
+                        }
+                        n && n(t);
+                      }
+                    );
+                  } catch (error) {
+                    console.warn("setReferer - chrome.runtime.sendMessage error:", error.message);
+                    // Fallback: just call the callback if provided
+                    n && n(null);
                   }
-                ),
+                })(),
             this
           );
         }
@@ -54768,7 +54802,19 @@ KAPAN TERPANGGIL:
                   }
                   
                   console.log("Shopee Search getProducts() - final cached data length:", cachedData.length);
-                  if (cachedData.length < 1) throw new Error("empty cache data");
+                  
+                  // If cached data is empty and cache is recent, throw error to trigger fresh API call
+                  const cacheAge = Date.now() - (i.data.date || 0);
+                  const cacheIsRecent = cacheAge < 300000; // 5 minutes
+                  
+                  if (cachedData.length < 1) {
+                    if (cacheIsRecent) {
+                      console.log("Shopee Search getProducts() - empty cache is recent, forcing fresh API call");
+                      throw new Error("empty recent cache, forcing refresh");
+                    } else {
+                      throw new Error("empty cache data");
+                    }
+                  }
                   
                   return r({
                     data: cachedData,
@@ -54777,7 +54823,13 @@ KAPAN TERPANGGIL:
                   });
                 } catch (parseError) {
                   console.error("Shopee Search getProducts() - cache data parsing error:", parseError);
-                  throw new Error("invalid cache data format");
+                  
+                  // If it's an "empty recent cache" error, continue to API call
+                  if (parseError.message.includes("empty recent cache")) {
+                    console.log("Shopee Search getProducts() - proceeding to fresh API call due to empty recent cache");
+                  } else {
+                    throw new Error("invalid cache data format");
+                  }
                 }
               }
             } catch (t) {
