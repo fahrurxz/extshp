@@ -54718,86 +54718,8 @@ KAPAN TERPANGGIL:
                 } else {
                   console.log("Shopee Search getProducts() - no items found in parsed data");
                 }
-              } catch (parseError) {
-                console.error("Shopee Search getProducts() - domCacheMap parsing error:", parseError);
-              }
-                  
-                  console.log("Extracted data:", {
-                    itemId, productName, shopId, shopName, rawPrice, historicalSold
-                  });
-                  
-                  const i = rawPrice / 1e5;
-                  const s = i * historicalSold;
-                  const o = 1e3 * createdTime;
-                  const l = Math.max(1, 1); // simplified for now
-                  const u = historicalSold / l;
-                  const h = historicalSold;
-                  const d = s / l;
-                  
-                  const m = {
-                    id: shopId,
-                    username: "",
-                    name: shopName,
-                    url: `https://${document.location.host}/shop/${shopId}`,
-                    isOfficial: isOfficial,
-                    isPowerBadge: isVerified,
-                    isPrefered: isPreferred,
-                    city: shopLocation,
-                    badgeName: isOfficial ? "Mall" : isPreferred ? "Star+" : isVerified ? "Star" : "",
-                    badgeUrl: ""
-                  };
-                    
-                  const productData = {
-                    id: itemId,
-                    name: productName,
-                    url: `https://${document.location.host}/product/${itemId}/`,
-                    image: image,
-                    price: i,
-                    originalPrice: i,
-                    currency: "Rp",
-                    sold: h,
-                    rating: itemRating.rating_star || 0,
-                    ratingCount: itemRating.rating_count?.[0] || 0,
-                    shop: m,
-                    revenue: s,
-                    revenuePerMonth: d,
-                    soldPerMonth: u,
-                    location: shopLocation,
-                    description: n.description || e.description || "",
-                    tags: [],
-                    createdAt: new Date(o).toISOString(),
-                    updatedAt: new Date().toISOString()
-                  };
-                  
-                  processedData.push(productData);
-                }
-                
-                console.log("Shopee Search getProducts() - processed fresh data:", processedData.length, "items");
-                
-                // Save processed data to cache
-                const cacheData = {
-                  items: processedData,
-                  meta: {
-                    query: l,
-                    page: o,
-                    totalCount: a.body.total_count || processedData.length,
-                    timestamp: Date.now(),
-                    source: "domCacheMap"
-                  }
-                };
-                
-                console.log("Shopee Search getProducts() - saving fresh data to cache");
-                _i.save(
-                  document.location.host || "shopee",
-                  `SearchResult:${l}:${o}`,
-                  JSON.stringify(cacheData)
-                );
-                
-                return r({
-                  data: processedData,
-                  date: Date.now(),
-                  need_update: false
-                });
+              } else {
+                console.log("Shopee Search getProducts() - no domCacheMap data available");
               }
               
               // Fall back to cached data if no fresh domCacheMap data
@@ -55010,9 +54932,9 @@ KAPAN TERPANGGIL:
                   document.location.host || "shopee",
                   `SearchResult:${l}:${e}`,
                   JSON.stringify(dataToSave)
-                ),
-                  console.log("Shopee Search getProducts() - success, returning data:", { dataLength: a.length, date: +new Date() }),
-                  r({ data: a, date: +new Date() });
+                );
+                console.log("Shopee Search getProducts() - success, returning data:", { dataLength: a.length, date: +new Date() });
+                r({ data: a, date: +new Date() });
               })
               .catch((err) => {
                 console.log("Shopee Search getProducts() - error in API call:", err);
