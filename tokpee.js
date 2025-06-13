@@ -54557,13 +54557,36 @@ KAPAN TERPANGGIL:
                 ),
                 i = t.response.body;
               console.log("Shopee Search getProducts() - cache response:", t.response.status, "body:", i);
+              console.log("Shopee Search getProducts() - cache response structure:", {
+                hasData: !!i.data,
+                hasDataData: !!i.data?.data,
+                finger: i.data?.finger,
+                dataFinger: typeof i.data?.data === 'string' ? 'data is string' : i.data?.data?.finger,
+                fullDataStructure: i.data
+              });
               if (503 == t.response.status) throw new Error(i.message);
-              console.log("Shopee Search getProducts() - trying to parse finger from:", i.data?.finger);
+              
+              // Try to get finger from multiple possible locations
+              let fingerSource = null;
               if (i.data && i.data.finger) {
-                u = Te.parseFinger(i.data.finger);
+                fingerSource = i.data.finger;
+                console.log("Shopee Search getProducts() - found finger in i.data.finger:", fingerSource);
+              } else if (i.data && typeof i.data.data === 'object' && i.data.data.finger) {
+                fingerSource = i.data.data.finger;
+                console.log("Shopee Search getProducts() - found finger in i.data.data.finger:", fingerSource);
+              } else {
+                console.log("Shopee Search getProducts() - no finger found in response, checking all locations:", {
+                  'i.data?.finger': i.data?.finger,
+                  'i.data?.data (type)': typeof i.data?.data,
+                  'i.data?.data': i.data?.data
+                });
+              }
+              
+              if (fingerSource && fingerSource !== "cached_data") {
+                u = Te.parseFinger(fingerSource);
                 console.log("Shopee Search getProducts() - parsed finger:", u);
               } else {
-                console.log("Shopee Search getProducts() - no finger data found, using default");
+                console.log("Shopee Search getProducts() - no valid finger data found or cached_data, using default");
                 u = "tokpee-non";
               }
               const a = await yi.getDomCacheMap(
@@ -54774,6 +54797,12 @@ KAPAN TERPANGGIL:
               return i("finger");
             }
             console.log("Shopee Search getProducts() - calling API method:", c[3]);
+            console.log("Shopee Search getProducts() - API method details:", {
+              methodName: c[3],
+              methodExists: typeof this[c[3]],
+              isFunction: typeof this[c[3]] === 'function',
+              callParams: { query: t, page: e, limit: 60 }
+            });
             if (!c[3] || typeof this[c[3]] !== 'function') {
               console.log("Shopee Search getProducts() - invalid API method:", c[3]);
               return i("invalid_method");
@@ -54784,10 +54813,48 @@ KAPAN TERPANGGIL:
                   error: n.error, 
                   action_type: n.action_type, 
                   itemsLength: n.items?.length,
-                  adjustCount: n.adjust?.count 
+                  adjustCount: n.adjust?.count,
+                  fullResponse: n
+                });
+                console.log("Shopee Search getProducts() - checking n.items:", {
+                  hasItems: !!n.items,
+                  isArray: Array.isArray(n.items),
+                  itemsType: typeof n.items,
+                  itemsLength: n.items?.length,
+                  firstItem: n.items?.[0]
                 });
                 if (n.error && n.action_type) throw "no_data";
                 Ik = n.adjust?.count ? Math.ceil(n.adjust.count / 60) : Ik;
+                
+                if (!n.items || !Array.isArray(n.items) || n.items.length === 0) {
+                  console.warn("Shopee Search getProducts() - no items in API response");
+                  console.log("Shopee Search getProducts() - processed products data:", { 
+                    totalProducts: 0, 
+                    sampleProduct: null
+                  });
+                  
+                  // Save empty result to cache
+                  const dataToSave = {
+                    items: [],
+                    meta: {
+                      query: l,
+                      page: e,
+                      totalCount: 0,
+                      timestamp: +new Date(),
+                      source: "searchProducts"
+                    }
+                  };
+                  
+                  console.log("Shopee Search getProducts() - saving empty data to cache");
+                  _i.save(
+                    document.location.host || "shopee",
+                    `SearchResult:${l}:${e}`,
+                    JSON.stringify(dataToSave)
+                  );
+                  console.log("Shopee Search getProducts() - success with empty data, returning:", { dataLength: 0, date: +new Date() });
+                  return r({ data: [], date: +new Date() });
+                }
+                
                 for (const e of n.items) {
                   if (
                     !this.isSearchPage() ||
