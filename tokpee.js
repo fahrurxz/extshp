@@ -54722,10 +54722,6 @@ KAPAN TERPANGGIL:
                 if (itemsArray && itemsArray.length > 0) {
                   console.log("Shopee Search getProducts() - using fresh API data:", itemsArray.length, "items");
                   
-                  // Process the fresh API data directly
-                  const freshItems = itemsArray;
-                  let processedData = [];
-                  
                   // Check if we're on search page once, outside the loop
                   const isOnSearchPage = this.isSearchPage();
                   console.log("Shopee Search getProducts() - isOnSearchPage:", isOnSearchPage);
@@ -54735,132 +54731,130 @@ KAPAN TERPANGGIL:
                     return r({ data: [], date: Date.now(), need_update: true });
                   }
                   
-                  for (let i = 0; i < freshItems.length; i++) {
-                    const e = freshItems[i];
+                  // Process all items in batch
+                  console.log("Shopee Search getProducts() - batch processing", itemsArray.length, "items...");
+                  const processedData = [];
+                  let successCount = 0;
+                  let errorCount = 0;
+                  
+                  for (let i = 0; i < itemsArray.length; i++) {
+                    const e = itemsArray[i];
                     
-                    // Log only first few items to avoid spam
-                    if (i < 3 || i % 10 === 0) {
-                      console.log(`Processing Shopee item ${i+1}/${freshItems.length} with structure:`, Object.keys(e));
-                      console.log(`Sample item ${i+1} data:`, {
-                        id: e.id || e.itemid,
-                        name: e.name || e.item_basic?.name,
-                        price: e.price || e.item_basic?.price,
-                        shop_name: e.shop?.name || e.item_basic?.shop_name,
-                        shop_id: e.shop?.id || e.item_basic?.shopid,
-                        sold: e.sold || e.item_basic?.sold,
-                        rating: e.rating,
-                        location: e.location
-                      });
-                    }
-                    
-                    // Handle multiple possible data structures from Shopee API
-                    const itemBasic = e.item_basic || e;
-                    const itemId = e.id || e.itemid || itemBasic.itemid || 0;
-                    const productName = e.name || itemBasic.name || itemBasic.item_name || "Unknown Product";
-                    const shopId = e.shop?.id || itemBasic.shopid || 0;
-                    const shopName = e.shop?.name || itemBasic.shop_name || "Unknown Shop";
-                    
-                    // Fix price handling - handle different price formats
-                    let rawPrice = 0;
-                    if (e.price) {
-                      rawPrice = e.price;
-                    } else if (itemBasic.price) {
-                      rawPrice = itemBasic.price;
-                    } else if (itemBasic.price_max) {
-                      rawPrice = itemBasic.price_max;
-                    } else if (itemBasic.price_min) {
-                      rawPrice = itemBasic.price_min;
-                    } else if (e.item_card_price?.price) {
-                      rawPrice = e.item_card_price.price;
-                    } else if (itemBasic.item_card_display_price?.price) {
-                      rawPrice = itemBasic.item_card_display_price.price;
-                    }
-                    
-                    // Shopee prices are typically in units of 100000 (5 decimal places)
-                    // But sometimes they come in different units, so let's be smart about it
-                    let actualPrice;
-                    if (rawPrice > 1000000) {
-                      // Price seems to be in micro-units (6+ digits), divide by 100000
-                      actualPrice = rawPrice / 100000;
-                    } else if (rawPrice > 1000) {
-                      // Price seems to be in cents/minor units, divide by 100
-                      actualPrice = rawPrice / 100;
-                    } else {
-                      // Price already in major units
-                      actualPrice = rawPrice;
-                    }
-                    
-                    const historicalSold = e.sold || itemBasic.sold || itemBasic.historical_sold || 0;
-                    const image = e.image || itemBasic.image || "";
-                    const shopLocation = e.location || itemBasic.shop_location || e.shop?.city || "";
-                    const itemRating = { 
-                      rating_star: e.rating || itemBasic.item_rating?.rating_star || 0, 
-                      rating_count: [e.ratingCount || itemBasic.item_rating?.rating_count?.[0] || 0] 
-                    };
-                    const isOfficial = e.shop?.isOfficial || itemBasic.is_official_shop || false;
-                    const isVerified = e.shop?.isPowerBadge || itemBasic.shopee_verified || false;
-                    const isPreferred = e.shop?.isPrefered || itemBasic.is_preferred_plus_seller || false;
-                    const createdTime = e.createdAt ? new Date(e.createdAt).getTime() / 1000 : 
-                                      itemBasic.ctime ? itemBasic.ctime : Date.now() / 1000;
-                    
-                    const s = actualPrice * historicalSold; // revenue
-                    const d = s; // revenue per month (simplified)
-                    const u = historicalSold; // sold per month (simplified)
-                    const o = createdTime * 1000; // convert to milliseconds
-                    
-                    // Log only first few processed items to avoid spam
-                    if (i < 3 || i % 10 === 0) {
-                      console.log(`Shopee Search getProducts() - processed item ${i+1}:`, {
+                    try {
+                      // Handle multiple possible data structures from Shopee API
+                      const itemBasic = e.item_basic || e;
+                      const itemId = e.id || e.itemid || itemBasic.itemid || 0;
+                      const productName = e.name || itemBasic.name || itemBasic.item_name || "Unknown Product";
+                      const shopId = e.shop?.id || itemBasic.shopid || 0;
+                      const shopName = e.shop?.name || itemBasic.shop_name || "Unknown Shop";
+                      
+                      // Fix price handling - handle different price formats
+                      let rawPrice = 0;
+                      if (e.price) {
+                        rawPrice = e.price;
+                      } else if (itemBasic.price) {
+                        rawPrice = itemBasic.price;
+                      } else if (itemBasic.price_max) {
+                        rawPrice = itemBasic.price_max;
+                      } else if (itemBasic.price_min) {
+                        rawPrice = itemBasic.price_min;
+                      } else if (e.item_card_price?.price) {
+                        rawPrice = e.item_card_price.price;
+                      } else if (itemBasic.item_card_display_price?.price) {
+                        rawPrice = itemBasic.item_card_display_price.price;
+                      }
+                      
+                      // Shopee prices are typically in units of 100000 (5 decimal places)
+                      // But sometimes they come in different units, so let's be smart about it
+                      let actualPrice;
+                      if (rawPrice > 1000000) {
+                        // Price seems to be in micro-units (6+ digits), divide by 100000
+                        actualPrice = rawPrice / 100000;
+                      } else if (rawPrice > 1000) {
+                        // Price seems to be in cents/minor units, divide by 100
+                        actualPrice = rawPrice / 100;
+                      } else {
+                        // Price already in major units
+                        actualPrice = rawPrice;
+                      }
+                      
+                      const historicalSold = e.sold || itemBasic.sold || itemBasic.historical_sold || 0;
+                      const image = e.image || itemBasic.image || "";
+                      const shopLocation = e.location || itemBasic.shop_location || e.shop?.city || "";
+                      const itemRating = { 
+                        rating_star: e.rating || itemBasic.item_rating?.rating_star || 0, 
+                        rating_count: [e.ratingCount || itemBasic.item_rating?.rating_count?.[0] || 0] 
+                      };
+                      const isOfficial = e.shop?.isOfficial || itemBasic.is_official_shop || false;
+                      const isVerified = e.shop?.isPowerBadge || itemBasic.shopee_verified || false;
+                      const isPreferred = e.shop?.isPrefered || itemBasic.is_preferred_plus_seller || false;
+                      const createdTime = e.createdAt ? new Date(e.createdAt).getTime() / 1000 : 
+                                        itemBasic.ctime ? itemBasic.ctime : Date.now() / 1000;
+                      
+                      const s = actualPrice * historicalSold; // revenue
+                      const d = s; // revenue per month (simplified)
+                      const u = historicalSold; // sold per month (simplified)
+                      const o = createdTime * 1000; // convert to milliseconds
+                      
+                      const m = {
+                        id: shopId,
+                        username: "",
+                        name: shopName,
+                        url: `https://${document.location.host}/shop/${shopId}`,
+                        isOfficial: isOfficial,
+                        isPowerBadge: isVerified,
+                        isPrefered: isPreferred,
+                        city: shopLocation,
+                        badgeName: isOfficial ? "Mall" : isPreferred ? "Star+" : isVerified ? "Star" : "",
+                        badgeUrl: ""
+                      };
+                        
+                      const productData = {
                         id: itemId,
                         name: productName,
-                        rawPrice: rawPrice,
-                        actualPrice: actualPrice,
+                        url: `https://${document.location.host}/product/${itemId}/`,
+                        image: image,
+                        price: actualPrice,
+                        originalPrice: actualPrice,
+                        currency: "Rp",
                         sold: historicalSold,
-                        shopName: shopName
-                      });
-                    }
-                    
-                    const m = {
-                      id: shopId,
-                      username: "",
-                      name: shopName,
-                      url: `https://${document.location.host}/shop/${shopId}`,
-                      isOfficial: isOfficial,
-                      isPowerBadge: isVerified,
-                      isPrefered: isPreferred,
-                      city: shopLocation,
-                      badgeName: isOfficial ? "Mall" : isPreferred ? "Star+" : isVerified ? "Star" : "",
-                      badgeUrl: ""
-                    };
+                        rating: itemRating.rating_star || 0,
+                        ratingCount: itemRating.rating_count?.[0] || 0,
+                        shop: m,
+                        revenue: s,
+                        revenuePerMonth: d,
+                        soldPerMonth: u,
+                        location: shopLocation,
+                        description: e.description || itemBasic.description || "",
+                        tags: [],
+                        createdAt: new Date(o).toISOString(),
+                        updatedAt: new Date().toISOString()
+                      };
                       
-                    const productData = {
-                      id: itemId,
-                      name: productName,
-                      url: `https://${document.location.host}/product/${itemId}/`,
-                      image: image,
-                      price: actualPrice,
-                      originalPrice: actualPrice,
-                      currency: "Rp",
-                      sold: historicalSold,
-                      rating: itemRating.rating_star || 0,
-                      ratingCount: itemRating.rating_count?.[0] || 0,
-                      shop: m,
-                      revenue: s,
-                      revenuePerMonth: d,
-                      soldPerMonth: u,
-                      location: shopLocation,
-                      description: e.description || itemBasic.description || "",
-                      tags: [],
-                      createdAt: new Date(o).toISOString(),
-                      updatedAt: new Date().toISOString()
-                    };
-                    
-                    processedData.push(productData);
+                      processedData.push(productData);
+                      successCount++;
+                      
+                    } catch (itemError) {
+                      console.error(`Shopee Search getProducts() - error processing item ${i+1}:`, itemError);
+                      errorCount++;
+                    }
                   }
+                  
+                  console.log("Shopee Search getProducts() - batch processing completed:", {
+                    total: itemsArray.length,
+                    successful: successCount,
+                    errors: errorCount,
+                    sampleItems: processedData.slice(0, 3).map(item => ({
+                      id: item.id,
+                      name: item.name,
+                      price: item.price,
+                      shop: item.shop.name
+                    }))
+                  });
                   
                   console.log("Shopee Search getProducts() - processed fresh data:", processedData.length, "items");
                   
-                  // Save processed data to cache
+                  // Save processed data to cache in one operation
                   const cacheData = {
                     items: processedData,
                     meta: {
@@ -54872,10 +54866,12 @@ KAPAN TERPANGGIL:
                     }
                   };
                   
-                  console.log("Shopee Search getProducts() - saving fresh domCacheMap data to cache:", {
-                    itemsCount: cacheData.items.length,
-                    meta: cacheData.meta,
-                    sampleItem: cacheData.items[0]
+                  console.log("Shopee Search getProducts() - saving domCacheMap data to cache:", {
+                    totalItems: cacheData.items.length,
+                    query: cacheData.meta.query,
+                    page: cacheData.meta.page,
+                    source: cacheData.meta.source,
+                    cacheKey: `SearchResult:${l}:${o}`
                   });
                   
                   _i.save(
@@ -54883,6 +54879,8 @@ KAPAN TERPANGGIL:
                     `SearchResult:${l}:${o}`,
                     JSON.stringify(cacheData)
                   );
+                  
+                  console.log("Shopee Search getProducts() - cache save completed successfully");
                   
                   return r({
                     data: processedData,
